@@ -1,1 +1,1 @@
-/data/train.h5
+PlantNet/PlantNet_pytorch/data/FPSprocessed/train_h5/train.h5

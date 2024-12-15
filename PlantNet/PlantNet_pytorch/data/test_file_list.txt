@@ -1,1 +1,1 @@
-/data/test.h5
+PlantNet/PlantNet_pytorch/data/FPSprocessed/test_h5/test.h5
