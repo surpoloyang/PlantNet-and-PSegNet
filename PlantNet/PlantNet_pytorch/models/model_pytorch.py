@@ -4,7 +4,7 @@ from utils.loss_pytorch import *
 from utils.torch_util import *
 import torch.nn as nn
 
-NUM_CATEGORY = 6
+NUM_CATEGORY = 2
 NUM_GROUPS = 40  # larger than gt instance numbers
 
 def convert_seg_to_one_hot(labels):

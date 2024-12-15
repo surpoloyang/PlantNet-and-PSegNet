@@ -3,6 +3,7 @@ import math
 import time
 import sys
 import os
+import argparse
 
 class FarthestSampler:
     def __init__(self):
@@ -12,8 +13,8 @@ class FarthestSampler:
         return ((p0 - points) ** 2).sum(axis=1)  # Returns the sum of squared Euclidean distances between the set of sample points and other points
 
     def _call__(self, pts, k):  # PTS is the input point cloud,  K is the number of downsampling
-        farthest_pts = np.zeros((k, 6),
-                                dtype=np.float32)  # The first three columns are coordinates xyz, and the fourth column is labels
+        farthest_pts = np.zeros((k, 8),
+                                dtype=np.float32)  # The first three columns are coordinates xyz, then RGB, and the seventh column is instance label，the eighth column is the semantic label.
         farthest_pts[0] = pts[np.random.randint(len(pts))]
         distances = self._calc_distances(farthest_pts[0, :3], pts[:, :3])
         for i in range(1, k):
@@ -23,8 +24,13 @@ class FarthestSampler:
 
 
 if __name__ == '__main__':
-    path = '/train'
-    saved_path = '/train_aug'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, default='train', help='train or test')
+    FLAGS = parser.parse_args()
+    path = f'./PlantNet/PlantNet_pytorch/data/FPSprocessed/{FLAGS.mode}'
+    saved_path = f'./PlantNet/PlantNet_pytorch/data/FPSprocessed/{FLAGS.mode}_aug'
+    if not os.path.exists(saved_path):
+        os.makedirs(saved_path)
     Filelist = os.listdir(path)
     n = len(Filelist)
     for idx in range(n):
@@ -38,4 +44,4 @@ if __name__ == '__main__':
             FPS = FarthestSampler()
             sample_points = FPS._call__(pcd_array, sample_count)
             file_nameR = Filelist[idx].split(".")[0] + "_aug_" + str(z) + ".txt"
-            np.savetxt(os.path.join(saved_path, file_nameR), sample_points, fmt='%f %f %f %d %d %d')
+            np.savetxt(os.path.join(saved_path, file_nameR), sample_points, fmt='%f %f %f %d %d %d %d %d')

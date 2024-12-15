@@ -29,17 +29,19 @@ class PlantnetDataset(Dataset):
     def __init__(self, file_list):
         f = h5py.File(file_list[0], 'r')
         self.data = f['data'][:].astype('float32')
+        self.feature = f['rgb'][:].astype('int32')
         self.label = f['pid'][:].astype('int64')
         self.seg = f['seglabel'][:].astype('int64')
-        self.objlabel = f['obj'][:].astype('int64')
+        # self.objlabel = None
         f.close()
 
     def __getitem__(self, index):
         data1 = self.data[index]
+        feature1 = self.feature[index]
         label1 = self.label[index]
         seg1 = self.seg[index]
-        obj1 = self.objlabel[index]
-        sample = {'data': data1, 'label': label1, 'seg': seg1, 'obj': obj1}
+        # obj1 = self.objlabel[index]
+        sample = {'data': data1, 'feature':feature1,'label': label1, 'seg': seg1}
         return sample
 
     def __len__(self):
@@ -59,10 +61,11 @@ def getDataFiles(list_filename):
 def load_h5_data_label_seg(h5_filename):
     f = h5py.File(h5_filename)
     data = f['data'][:]
+    feature = f['rgb'][:]
     label = f['pid'][:]
     seg = f['seglabel'][:]
-    objlabel = f['obj'][:]
-    return (data, label, seg, objlabel)
+    objlabel = None
+    return (data, feature, label, seg, objlabel)
 
 
 def shuffle_data(data, labels):
@@ -81,6 +84,7 @@ def shuffle_data(data, labels):
 def loadDataFile_with_groupseglabel_stanfordindoor(filename):
     f = h5py.File(filename)
     data = f['data'][:]
+    feature = f['rgb'][:].astype(np.int32)
     group = f['pid'][:].astype(np.int32)#NxG
     if 'label' in f:
         label = f['label'][:].astype(np.int32)
@@ -90,7 +94,7 @@ def loadDataFile_with_groupseglabel_stanfordindoor(filename):
         seg = f['seglabel'][:].astype(np.int32)
     else:
         seg = f['seglabels'][:].astype(np.int32)
-    return (data, group, label, seg)
+    return (data, feature, group, label, seg)
 
 
 def translate_pointcloud(pointcloud):

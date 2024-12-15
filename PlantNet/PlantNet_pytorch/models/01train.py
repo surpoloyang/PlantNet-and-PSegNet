@@ -13,37 +13,39 @@ import importlib
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import provider
-import model_pytorch as mp
+# import model_pytorch as mp
 import time
 from tqdm import tqdm
 
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(os.path.dirname(BASE_DIR))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+print(BASE_DIR, ROOT_DIR)
 sys.path.append(BASE_DIR)
-sys.path.append(os.path.join(BASE_DIR, '../utils'))
+sys.path.append(ROOT_DIR)
+sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
     parser.add_argument('--model', type=str, default='model_pytorch', help='model name')
-    parser.add_argument('--batch_size', type=int, default=10, help='Batch Size during training [default: 16]')
-    parser.add_argument('--epoch', default=200, type=int, help='Epoch to run [default: 32]')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch Size during training [default: 16]')
+    parser.add_argument('--epoch', default=32, type=int, help='Epoch to run [default: 32]')
     parser.add_argument('--learning_rate', default=0.003, type=float, help='Initial learning rate [default: 0.001]')
     parser.add_argument('--gpu', type=int, default=0, help='GPU to use [default: GPU 0]')
     parser.add_argument('--optimizer', type=str, default='Adam', help='Adam or SGD [default: Adam]')
-    parser.add_argument('--log_dir', type=str, default=None, help='Log path [default: None]')
+    # parser.add_argument('--log_dir', type=str, default=None, help='Log path [default: None]')
     parser.add_argument('--decay_rate', type=float, default=1e-3, help='weight decay [default: 1e-4]')
     parser.add_argument('--npoint', type=int, default=4096, help='Point Number [default: 4096]')
     parser.add_argument('--step_size', type=int, default=10, help='Decay step for lr decay [default: every 10 epochs]')
     parser.add_argument('--lr_decay', type=float, default=0.7, help='Decay rate for lr decay [default: 0.7]')
-    parser.add_argument('--input_list_train', type=str, default='/data/train_file_list.txt',
+    parser.add_argument('--input_list_train', type=str, default='data/train_file_list.txt',
                         help='Input data list file')
-    parser.add_argument('--input_list_test', type=str, default='/data/test_file_list.txt',
+    parser.add_argument('--input_list_test', type=str, default='data/test_file_list.txt',
                         help='Input data list file')
     parser.add_argument('--weights_path', type=str, default=None,
-                        help='Input data list file[default:'/weights/path' or None]')
+                        help="Input data list file[default:'/weights/path' or None]")
 
     return parser.parse_args()
 
@@ -63,19 +65,27 @@ def main(args):
 
     '''CREATE DIR'''
     timestr = str(datetime.datetime.now().strftime('%Y-%m-%d_%H-%M'))
-    experiment_dir = Path('./log/')
-    experiment_dir.mkdir(exist_ok=True)
-    experiment_dir = experiment_dir.joinpath('sem_seg')
-    experiment_dir.mkdir(exist_ok=True)
-    if args.log_dir is None:
-        experiment_dir = experiment_dir.joinpath(timestr)
-    else:
-        experiment_dir = experiment_dir.joinpath(args.log_dir)
-    experiment_dir.mkdir(exist_ok=True)
-    checkpoints_dir = experiment_dir.joinpath('checkpoints/')
-    checkpoints_dir.mkdir(exist_ok=True)
-    log_dir = experiment_dir.joinpath('logs/')
-    log_dir.mkdir(exist_ok=True)
+    experiment_dir = os.path.join(ROOT_DIR, 'log')
+    if not os.path.exists(experiment_dir):
+        os.mkdir(experiment_dir)
+    # experiment_dir.mkdir(exist_ok=True)
+    # experiment_dir = experiment_dir.joinpath('sem_seg')
+    # experiment_dir.mkdir(exist_ok=True)
+    # if args.log_dir is None:
+    #     experiment_dir = experiment_dir.joinpath(timestr)
+    # else:
+    #     experiment_dir = experiment_dir.joinpath(args.log_dir)
+    # experiment_dir.mkdir(exist_ok=True)
+    checkpoints_dir = os.path.join(experiment_dir, 'checkpoints')
+    if not os.path.exists(checkpoints_dir):
+        os.mkdir(checkpoints_dir)
+    log_dir = os.path.join(experiment_dir, 'logs')
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
+    # checkpoints_dir = experiment_dir.joinpath('checkpoints/')
+    # checkpoints_dir.mkdir(exist_ok=True)
+    # log_dir = experiment_dir.joinpath('logs/')
+    # log_dir.mkdir(exist_ok=True)
 
     '''LOG'''
     args = parse_args()
@@ -92,23 +102,26 @@ def main(args):
     '''Add summary writers'''
     train_writer = SummaryWriter(comment='train')
     test_writer = SummaryWriter(comment='test')
-    NUM_CLASSES = 6 # sem classes
+    NUM_CLASSES = 2 # sem classes
     NUM_POINT = args.npoint
     BATCH_SIZE = args.batch_size
 
-    print("start loading training data ...")
     # Load train data,(3640,4096,3)
     train_file_list = provider.getDataFiles(os.path.join(ROOT_DIR, args.input_list_train))
     test_file_list = provider.getDataFiles(os.path.join(ROOT_DIR, args.input_list_test))
+    print("start loading training data ...")
     TRAIN_DATASET = provider.PlantnetDataset(file_list=train_file_list)
-    TEST_DATASET = provider.PlantnetDataset(file_list=test_file_list)
-    print("start loading test data ...")
+    # def worker_init_fn(worker_id):
+    #     np.random.seed(worker_id + int(time.time()))
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True,
                                                   num_workers=0, pin_memory=True, drop_last=True,
                                                   worker_init_fn=lambda x: np.random.seed(x + int(time.time())))
+    log_string("The number of training data is: %d" % len(TRAIN_DATASET))
+    
+    print("start loading test data ...")
+    TEST_DATASET = provider.PlantnetDataset(file_list=test_file_list)
     testDataLoader = torch.utils.data.DataLoader(TEST_DATASET, batch_size=args.batch_size, shuffle=False, num_workers=0,
                                                  pin_memory=True, drop_last=True)
-    log_string("The number of training data is: %d" % len(TRAIN_DATASET))
     log_string("The number of test data is: %d" % len(TEST_DATASET))
 
     '''MODEL LOADING'''
@@ -116,10 +129,15 @@ def main(args):
     classifier = MODEL.plantnet_model(NUM_CLASSES).to(device)
     criterion = MODEL.get_loss().to(device)
     classifier.apply(inplace_relu)
-    log_string(str(classifier))
+    # log_string(str(classifier))
 
     def weights_init(m):
         classname = m.__class__.__name__
+        # def init_func(m):
+        #     torch.nn.init.xavier_normal_(m.weight.data)
+        #     if m.bias is not None:
+        #         torch.nn.init.constant_(m.bias.data, 0.0)
+        # for m
         if classname.find('Conv2d') != -1:
             torch.nn.init.xavier_normal_(m.weight.data)
             if m.bias is not None:
@@ -163,11 +181,14 @@ def main(args):
     MOMENTUM_ORIGINAL = 0.1
     MOMENTUM_DECCAY = 0.5
     MOMENTUM_DECCAY_STEP = args.step_size
-
+    global_epoch = 0
     best_iou = 0.0
+    
+    '''TRANING'''
+    logger.info('Start training...')
     for epoch in range(start_epoch, args.epoch):
-        '''Train on chopped scenes'''
-        log_string('**** Epoch %d (%d/%s) ****' % (epoch, epoch, args.epoch))
+        # '''Train on chopped scenes''' 
+        log_string('**** Epoch %d (%d/%s) ****' % (global_epoch + 1, epoch + 1, args.epoch))
         lr = max(args.learning_rate * (args.lr_decay ** (epoch // args.step_size)), LEARNING_RATE_CLIP)
         log_string('Learning rate:%f' % lr)
         for param_group in optimizer.param_groups:
@@ -187,11 +208,12 @@ def main(args):
             points = sample['data']
             group = sample['label']
             sem = sample['seg']
+            # onehot应该在制作plantdataset的时候就做好，看看能不能修改
             points = points.data.numpy()
             group = group.data.numpy()
-            sem = sem.data.numpy()
-            pts_label_one_hot, pts_label_mask = mp.convert_seg_to_one_hot(sem)  # (16,4096,6)
-            pts_group_label, pts_group_mask = mp.convert_groupandcate_to_one_hot(group)  # (16,4096,40)
+            sem = sem.data.numpy()  # (B,4096,1)
+            pts_label_one_hot, pts_label_mask = MODEL.convert_seg_to_one_hot(sem)  # (B,4096,2)
+            pts_group_label, pts_group_mask = MODEL.convert_groupandcate_to_one_hot(group)  # (B,4096,40)
             points = torch.Tensor(points)
             group = torch.Tensor(group)
             sem = torch.Tensor(sem)
@@ -208,13 +230,13 @@ def main(args):
             total_correct += torch.eq(pred_sem, sem).sum()
             total_seen += (BATCH_SIZE * NUM_POINT)
             loss_sum += loss
-            if i % 50 == 0:
-                log_string(
-                    "loss: {:.2f}; sem_loss: {:.2f}; disc_loss: {:.2f}; l_var: {:.2f}; l_dist: {:.2f}; l_reg: {:.3f}; simmat_loss: {:.3f}.".format(
-                        loss, classify_loss, disc_loss, l_var, l_dist, l_reg, simmat_loss))
-            train_writer.add_scalar('Training loss', loss_sum / num_batches, i)
-            train_writer.add_scalar('Training accuracy', total_correct / float(total_seen), i)
-            train_writer.close()
+            if i % 4 == 0:
+                train_writer.add_scalar('Training loss', loss_sum / num_batches, i)
+                train_writer.add_scalar('Training accuracy', total_correct / float(total_seen), i)
+                train_writer.close()
+        log_string(
+            "loss: {:.2f}; sem_loss: {:.2f}; disc_loss: {:.2f}; l_var: {:.2f}; l_dist: {:.2f}; l_reg: {:.3f}; simmat_loss: {:.3f}.".format(
+                loss, classify_loss, disc_loss, l_var, l_dist, l_reg, simmat_loss))
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
@@ -229,7 +251,7 @@ def main(args):
             }
             torch.save(state, savepath)
             log_string('Saving model....')
-
+            
         '''Evaluate on chopped scenes'''
         with torch.no_grad():
             num_batches = len(testDataLoader)
@@ -240,7 +262,8 @@ def main(args):
             total_correct_class = torch.zeros(NUM_CLASSES).to(device)
             total_iou_deno_class = torch.zeros(NUM_CLASSES).to(device)
             classifier = classifier.eval()
-            log_string('---- EPOCH %03d EVALUATION ----' % epoch)
+            log_string('---- EPOCH %03d EVALUATION ----' % (global_epoch + 1))
+            # log_string('---- EPOCH %03d EVALUATION ----' % epoch)
             for i, sample in tqdm(enumerate(testDataLoader), total=len(testDataLoader), smoothing=0.9):
                 points = sample['data']
                 group = sample['label']
@@ -248,8 +271,11 @@ def main(args):
                 points = points.data.numpy()
                 group = group.data.numpy()
                 sem = sem.data.numpy()
-                pts_label_one_hot, pts_label_mask = mp.convert_seg_to_one_hot(sem)  # (16,4096,6)
-                pts_group_label, pts_group_mask = mp.convert_groupandcate_to_one_hot(group)
+                pts_label_one_hot, pts_label_mask = MODEL.convert_seg_to_one_hot(sem)  # (16,4096,6)
+                pts_group_label, pts_group_mask = MODEL.convert_groupandcate_to_one_hot(group)
+                points = torch.Tensor(points)
+                group = torch.Tensor(group)
+                sem = torch.Tensor(sem)
                 points = points.to(device)
                 group = group.to(device)
                 sem = sem.to(device)
@@ -294,6 +320,7 @@ def main(args):
                 }
                 torch.save(state, savepath)
                 log_string('Best mIoU: %f' % best_iou)
+        global_epoch += 1
 
 
 if __name__ == '__main__':
