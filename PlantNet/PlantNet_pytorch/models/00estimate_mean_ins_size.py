@@ -10,7 +10,7 @@ def estimate(args):
     MODEL_DIR = os.path.dirname(os.path.abspath(__file__))   # PlantNet/PlantNet_pytorch/models
     sys.path.append(MODEL_DIR)
     BASE_DIR = os.path.dirname(MODEL_DIR)                    # PlantNet/PlantNet_pytorch
-    LOG_DIR = os.path.join(BASE_DIR,'/{}'.format(args.log)) # PlantNet/PlantNet_pytorch/log
+    LOG_DIR = os.path.join(BASE_DIR, args.log) # PlantNet/PlantNet_pytorch/log
     if not os.path.exists(LOG_DIR):
         os.mkdir(LOG_DIR)
     num_classes = 40
