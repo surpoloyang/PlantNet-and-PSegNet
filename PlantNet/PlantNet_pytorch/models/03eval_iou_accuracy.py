@@ -1,12 +1,28 @@
 import os
 import numpy as np
 from scipy import stats
+import argparse
 
 NUM_CLASSES = 2
 MAX_POINTS = 4096
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
 
+def parse_args():
+    parser = argparse.ArgumentParser('test output path')
+    parser.add_argument('--log_dir', default='out', help='Log dir [default: log]')
+    # parser.add_argument('--input_list_train', type=str, default='data/train_file_list.txt',
+    #                     help='Input data list file')
+    # parser.add_argument('--input_list_test', type=str, default='data/test_file_list.txt',
+    #                     help='Input data list file')
+
+    return parser.parse_args()
+
+args = parse_args()
+LOG_DIR = os.path.join(ROOT_DIR, 'log')  # PlantNet_pytorch/log
+OUTPUT_DIR = os.path.join(LOG_DIR, args.log_dir)  # PlantNet_pytorch/log/...
 pred_data_label_filenames = []
-file_name = 'PlantNet/PlantNet_pytorch/log/out/output_filelist1.txt'
+file_name = os.path.join(OUTPUT_DIR, 'output_filelist1.txt')
 pred_data_label_filenames += [line.rstrip() for line in open(file_name)]
 
 gt_label_filenames = [f.rstrip('pred.txt') + 'gt.txt' for f in pred_data_label_filenames]
@@ -167,10 +183,6 @@ for i_sem in range(NUM_CLASSES):
     precision[i_sem] = prec
     recall[i_sem] = rec
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(BASE_DIR)
-LOG_DIR = os.path.join(ROOT_DIR, 'log')
-OUTPUT_DIR = os.path.join(LOG_DIR, 'out')
 LOG_FOUT = open(os.path.join(OUTPUT_DIR, 'eval_iou_acc.txt'), 'w')
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')

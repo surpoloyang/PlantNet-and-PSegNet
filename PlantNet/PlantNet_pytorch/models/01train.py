@@ -44,8 +44,8 @@ def parse_args():
                         help='Input data list file')
     parser.add_argument('--input_list_test', type=str, default='data/test_file_list.txt',
                         help='Input data list file')
-    parser.add_argument('--weights_path', type=str, default=None,
-                        help="Input data list file[default:'/weights/path' or None]")
+    parser.add_argument('--override', type=bool, default=True,
+                        help="over model weights or not [default:True]")
 
     return parser.parse_args()
 
@@ -151,8 +151,8 @@ def main(args):
             if m.bias is not None:
                 torch.nn.init.constant_(m.bias.data, 0.0)
 
-    if args.weights_path is not None:
-        checkpoint = torch.load(args.weights_path)
+    if args.override:
+        checkpoint = torch.load('PlantNet/PlantNet_pytorch/log/checkpoints/best_model.pth')
         start_epoch = checkpoint['epoch']
         classifier.load_state_dict(checkpoint['model_state_dict'])
         log_string('Use pretrain model')
@@ -240,7 +240,7 @@ def main(args):
         log_string('Training mean loss: %f' % (loss_sum / num_batches))
         log_string('Training accuracy: %f' % (total_correct / float(total_seen)))
 
-        if epoch % 2 == 0:
+        if (epoch+1) % 5 == 0:
             logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/model_epoch{}.pth'.format(epoch)
             log_string('Saving at %s' % savepath)

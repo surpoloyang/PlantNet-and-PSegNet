@@ -14,7 +14,7 @@ Created on Fri Apr  2 12:27:49 2021
 ###########################此程序专门针对PlantNet跑出的结果，使其保存为一个个的txt文件，分别为gt-语义，gt-实例，pred-语义，pred-实例
 import numpy as np
 import os
-
+import argparse
 def get_filelist(path):
     Filelist = []
     for home, dirs, files in os.walk(path):
@@ -30,8 +30,25 @@ def file_sorting(files):
                 files[j], files[j+1] = files[j+1], files[j]
     return files
 
-data=np.loadtxt("PlantNet/PlantNet_pytorch/log/out/test_h5_pred.txt")  # 获取预测的数据 predict data
-gtdata=np.loadtxt("PlantNet/PlantNet_pytorch/log/out/test_h5_gt.txt")  # 获取gt  ground truth data
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+
+def parse_args():
+    parser = argparse.ArgumentParser('test output path')
+    parser.add_argument('--log_dir', default='out', help='Log dir [default: log]')
+    # parser.add_argument('--input_list_train', type=str, default='data/train_file_list.txt',
+    #                     help='Input data list file')
+    # parser.add_argument('--input_list_test', type=str, default='data/test_file_list.txt',
+    #                     help='Input data list file')
+
+    return parser.parse_args()
+
+args = parse_args()
+LOG_DIR = os.path.join(ROOT_DIR, 'log')  # PlantNet_pytorch/log
+OUTPUT_DIR = os.path.join(LOG_DIR, args.log_dir)  # PlantNet_pytorch/log/...
+
+data=np.loadtxt(os.path.join(OUTPUT_DIR, 'test_h5_pred.txt'))  # 获取预测的数据 predict data
+gtdata=np.loadtxt(os.path.join(OUTPUT_DIR, 'test_h5_gt.txt'))  # 获取gt  ground truth data
 pcd=[]
 seg=[]
 ins=[]
@@ -40,10 +57,10 @@ gt_ins=[]
 gt_seg=[]
 
 file_path="PlantNet/PlantNet_pytorch/data/FPSprocessed/test_aug"  # augment test data
-ins_path="PlantNet/PlantNet_pytorch/log/out/test_produce/predict/ins"  #save path
-sem_path="PlantNet/PlantNet_pytorch/log/out/test_produce/predict/sem"
-gt_ins_path="PlantNet/PlantNet_pytorch/log/out/test_produce/gt/ins_gt"
-gt_sem_path="PlantNet/PlantNet_pytorch/log/out/test_produce/gt/sem_gt"
+ins_path=os.path.join(OUTPUT_DIR, 'test_produce/produce/ins')   # "PlantNet/PlantNet_pytorch/log/args.log_dir/test_produce/predict/ins"  #save path
+sem_path=os.path.join(OUTPUT_DIR, 'test_produce/produce/sem')   # "PlantNet/PlantNet_pytorch/log/args.log_dir/test_produce/predict/sem"
+gt_ins_path=os.path.join(OUTPUT_DIR, 'test_produce/gt/ins') # "PlantNet/PlantNet_pytorch/log/args.log_dir/test_produce/gt/ins_gt"
+gt_sem_path=os.path.join(OUTPUT_DIR, 'test_produce/gt/sem') # "PlantNet/PlantNet_pytorch/log/args.log_dir/test_produce/gt/sem_gt"
 files=os.listdir(file_path)
 if not os.path.exists(ins_path):
     os.makedirs(ins_path)
