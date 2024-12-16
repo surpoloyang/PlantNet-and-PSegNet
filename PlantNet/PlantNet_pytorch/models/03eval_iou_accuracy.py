@@ -189,10 +189,10 @@ log_string('Instance Segmentation mPrecision: {}'.format(np.mean(precision)))
 log_string('Instance Segmentation Recall: {}'.format(recall))
 log_string('Instance Segmentation mRecall: {}'.format(np.mean(recall)))
 
-print("Precision:", (precision[0]+precision[1])/2, (precision[2]+precision[3])/2, (precision[4]+precision[5])/2)
-print("recall:", (recall[0]+recall[1])/2, (recall[2]+recall[3])/2, (recall[4]+recall[5])/2)
-print("COV:", (MUCov[0]+MUCov[1])/2, (MUCov[2]+MUCov[3])/2, (MUCov[4]+MUCov[5])/2)
-print("WCov:", (MWCov[0]+MWCov[1])/2, (MWCov[2]+MWCov[3])/2, (MWCov[4]+MWCov[5])/2)
+print("Precision:", (precision[0]+precision[1])/2)
+print("recall:", (recall[0]+recall[1])/2)
+print("COV:", (MUCov[0]+MUCov[1])/2)
+print("WCov:", (MWCov[0]+MWCov[1])/2)
 
 # semantic results
 iou_list = []
