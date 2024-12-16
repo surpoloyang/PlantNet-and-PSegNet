@@ -2,11 +2,11 @@ import os
 import numpy as np
 from scipy import stats
 
-NUM_CLASSES = 6
+NUM_CLASSES = 2
 MAX_POINTS = 4096
 
 pred_data_label_filenames = []
-file_name = '/out/output_filelist1.txt'
+file_name = 'PlantNet/PlantNet_pytorch/log/out/output_filelist1.txt'
 pred_data_label_filenames += [line.rstrip() for line in open(file_name)]
 
 gt_label_filenames = [f.rstrip('pred.txt') + 'gt.txt' for f in pred_data_label_filenames]
@@ -38,7 +38,7 @@ all_mean_weighted_cov = [[] for itmp in range(NUM_CLASSES)]
 data_label = []
 gt_label = []
 for i in range(len(pred_data_label_filenames)):
-    print('load file %d...'%i)
+    print('load file %d...'%(i+1))
     current_data_label = np.loadtxt(pred_data_label_filenames[i])
     current_gt_label = np.loadtxt(gt_label_filenames[i])
     data_label.append(current_data_label)
@@ -57,11 +57,11 @@ for i in range(plant_number):
     pred_sem = data_label[start_index:end_index, -2].reshape(-1).astype(int)
 #    pred_sem[pred_sem != 5] = 1
 #    pred_sem[pred_sem == 5] = 0
-    gt_ins = gt_label[start_index:end_index, 1].reshape(-1).astype(int)
-    gt_sem = gt_label[start_index:end_index, 0].reshape(-1).astype(int)
+    gt_ins = gt_label[start_index:end_index, -1].reshape(-1).astype(int)
+    gt_sem = gt_label[start_index:end_index, -2].reshape(-1).astype(int)
 #    gt_sem[gt_sem != 5] = 1
 #    gt_sem[gt_sem == 5] = 0
-    gt_obj = gt_label[start_index:end_index, 2].reshape(-1).astype(int)
+    # gt_obj = gt_label[start_index:end_index, 2].reshape(-1).astype(int)
 
     # pn semantic mIoU
     for j in range(gt_sem.shape[0]):
@@ -167,8 +167,11 @@ for i_sem in range(NUM_CLASSES):
     precision[i_sem] = prec
     recall[i_sem] = rec
 
-
-LOG_FOUT = open(os.path.join('log_6_BS74_0.3.txt'), 'w')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+LOG_DIR = os.path.join(ROOT_DIR, 'log')
+OUTPUT_DIR = os.path.join(LOG_DIR, 'out')
+LOG_FOUT = open(os.path.join(OUTPUT_DIR, 'eval_iou_acc.txt'), 'w')
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')
     LOG_FOUT.flush()
