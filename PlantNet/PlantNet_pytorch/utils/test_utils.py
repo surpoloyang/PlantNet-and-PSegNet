@@ -241,7 +241,7 @@ def eval_3d_perclass(tp, fp, npos):
 ##    Visualize Results   ##
 ############################
 
-color_map = json.load(open('part_color_mapping.json', 'r'))
+color_map = json.load(open('PlantNet/PlantNet_pytorch/models/part_color_mapping.json', 'r'))
 
 def output_bounding_box_withcorners(box_corners, seg, out_file):
     # ##############   0       1       2       3       4       5       6       7
