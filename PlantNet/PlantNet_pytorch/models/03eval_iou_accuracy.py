@@ -49,7 +49,7 @@ gt_label = np.concatenate(gt_label, axis=0)
 plant_number = data_label.shape[0]//MAX_POINTS
 
 for i in range(plant_number):
-    print('%d / %d ...' % (i, plant_number))
+    print('%d / %d ...' % (i+1, plant_number))
 #    print(i)
     start_index = i * MAX_POINTS
     end_index = (i+1) * MAX_POINTS
