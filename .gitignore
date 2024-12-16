@@ -2,3 +2,9 @@
 Original_Dataset
 # 辣椒苗数据集
 PepperSeedlings
+# 处理后的数据集
+PlantNet/PlantNet_pytorch/data/FPSprocessed
+# pycache
+**/__pycache__/
+# runs
+runs
