@@ -93,7 +93,7 @@ def test():
         for shape_idx in range(len_pts_files):
             file_path = File_PATH_LIST[shape_idx]   # 'PlantNet_pytorch/data/FPSprocessed/test_h5/test.h5'
             log_string('%d / %d ...' % (shape_idx+1, len_pts_files))
-            log_string('Loading test file: ' + file_path)  
+            log_string('Loading train file: ' + file_path)  
             out_data_label_filename = os.path.dirname(file_path).split('/')[-1] + '_pred.txt'   # 'test_h5_pred.txt'
             out_data_label_filepath = os.path.join(OUTPUT_DIR, out_data_label_filename)  # PlantNet_pytorch/log/out/test_h5_pred.txt
             out_gt_label_filename = os.path.dirname(file_path).split('/')[-1] + '_gt.txt'  # 'test_h5_gt.txt'
@@ -104,34 +104,34 @@ def test():
             fout_out_filelist.write(out_data_label_filepath+'\n')
 
             cur_data, cur_feature, cur_group, cur_sem, cur_obj = provider.load_h5_data_label_seg(file_path)
-            cur_data = cur_data[:, :, :]    # (20, 4096, 3)
-            cur_feature = cur_feature[:, :, :]  # (20, 4096, 3)
-            cur_sem = np.squeeze(cur_sem)   # (20, 4096)
-            cur_group = np.squeeze(cur_group)   # (20, 4096)
+            cur_data = cur_data[:, :, :]
+            cur_feature = cur_feature[:, :, :]
+            cur_sem = np.squeeze(cur_sem)
+            cur_group = np.squeeze(cur_group)
             # cur_obj = np.squeeze(cur_obj)
             
 
-            cur_pred_sem = np.zeros_like(cur_sem)   # (20, 4096)
-            cur_pred_sem_softmax = np.zeros([cur_sem.shape[0], cur_sem.shape[1], NUM_CLASSES])  # (20, 4096, 2)
-            group_output = np.zeros_like(cur_group) # (20, 4096)
+            cur_pred_sem = np.zeros_like(cur_sem)
+            cur_pred_sem_softmax = np.zeros([cur_sem.shape[0], cur_sem.shape[1], NUM_CLASSES])
+            group_output = np.zeros_like(cur_group)
             # group_obj = np.zeros_like(cur_obj)
             
             
             num_data = cur_data.shape[0]    # 20, 因为batch_size=1，所以也是batch数量
-            for j in range(num_data):   # 20
-                log_string("Processsing: File [%d] (Batch[%d]/Batch[%d])"%(shape_idx+1, j+1, num_data+1))
+            for j in range(num_data):
+                log_string("Processsing: File [%d] Batch[%d]"%(shape_idx+1, j))
 
                 pts = cur_data[j,...]   # (4096, 3)
                 # obj = cur_obj[j,...]    
                 pointclouds_pl = np.expand_dims(pts, 0).astype(np.float32)  # (1, 4096, 3)
                 pointclouds_pl = torch.from_numpy(pointclouds_pl)
                 pointclouds_pl = pointclouds_pl.to(torch.device('cuda'))
-                pred_sem, pred_ins, fuse_catch = classifier(pointclouds_pl) #(1,4096,2), (1,4096,5), (1,4096,4096)
-                pred_sem_softmax = F.softmax(pred_sem, dim=2)   # (1, 4096, 2)
-                pred_sem_label = torch.argmax(pred_sem_softmax, dim=2)  # (1, 4096)
-                pred_ins = np.squeeze(pred_ins, axis=0) # (4096, 5)
-                pred_sem = np.squeeze(pred_sem_label, axis=0)   # (4096,)
-                pred_sem_softmax = np.squeeze(pred_sem_softmax, axis=0) # (4096, 2)
+                pred_sem, pred_ins, fuse_catch = classifier(pointclouds_pl)#(1,4096,3)
+                pred_sem_softmax = F.softmax(pred_sem, dim=2)
+                pred_sem_label = torch.argmax(pred_sem_softmax, dim=2)
+                pred_val = np.squeeze(pred_ins, axis=0)# data_number x 5
+                pred_sem = np.squeeze(pred_sem_label, axis=0)
+                pred_sem_softmax = np.squeeze(pred_sem_softmax, axis=0)
                 pred_sem = pred_sem.cpu().detach().numpy()
                 pred_sem_softmax = pred_sem_softmax.cpu().detach().numpy()
                 cur_pred_sem[j, :] = pred_sem
@@ -139,42 +139,42 @@ def test():
                 
                 # cluster
                 bandwidth = BANDWIDTH
-                pred_ins = pred_ins.cpu().detach().numpy()
-                num_clusters, labels, cluster_centers = cluster(pred_ins, bandwidth)
-                #最终聚类的数量，每个点的标签，每个簇的中心
-                groupids_block = labels # (4096,)每个点属于哪个簇的标签 (4096,)
+                pred_val = pred_val.cpu().detach().numpy()
+                num_clusters, labels, cluster_centers = cluster(pred_val, bandwidth)
+
+                groupids_block = labels
                 # group_obj[j,:] = obj
                 
-                un = np.unique(groupids_block)  #每个簇的标签
+                un = np.unique(groupids_block)
                 pts_in_pred = [[] for itmp in range(NUM_CLASSES)]
-                group_pred_final = -1 * np.ones_like(groupids_block)    # (4096,)没分到簇的点标记为-1
+                group_pred_final = -1 * np.ones_like(groupids_block)
                 grouppred_cnt = 0
                 for ig, g in enumerate(un): #each object in prediction
                     if g == -1:
                         continue
-                    tmp = (groupids_block == g) # 属于g这个簇的点
-                    sem_seg_g = int(stats.mode(pred_sem[tmp], keepdims=False)[0])   #簇g中出现最多的语义标签
-                    if np.sum(tmp) > 0.01 * mean_num_pts_in_group[sem_seg_g]:   #如果簇g中的点数大于平均点数的1%
-                        group_pred_final[tmp] = grouppred_cnt   #簇g中的点都标记为grouppred_cnt
-                        pts_in_pred[sem_seg_g] += [tmp]  #添加簇g到语义标签为sem_seg_g的语义类别中
-                        grouppred_cnt += 1  #到下一个簇
+                    tmp = (groupids_block == g)
+                    sem_seg_g = int(stats.mode(pred_sem[tmp], keepdims=False)[0])
+                    if np.sum(tmp) > 0.01 * mean_num_pts_in_group[sem_seg_g]:
+                        group_pred_final[tmp] = grouppred_cnt
+                        pts_in_pred[sem_seg_g] += [tmp]
+                        grouppred_cnt += 1
                 
                 group_output[j, :] = group_pred_final
 
-            group_pred = group_output.reshape(-1)   # (20*4096,)
-            seg_pred = cur_pred_sem.reshape(-1)  # (20*4096,)
-            seg_pred_softmax = cur_pred_sem_softmax.reshape([-1, NUM_CLASSES])  # (20*4096, 2)
-            pts = cur_data.reshape([-1, 3]) # (20*4096, 3)
-            feature = cur_feature.reshape([-1, 3])  # (20*4096, 3)
+            group_pred = group_output.reshape(-1)
+            seg_pred = cur_pred_sem.reshape(-1)
+            seg_pred_softmax = cur_pred_sem_softmax.reshape([-1, NUM_CLASSES])
+            pts = cur_data.reshape([-1, 3])
+            feature = cur_feature.reshape([-1, 3])
             # obj_gt = group_obj.reshape(-1)
-            seg_gt = cur_sem.reshape(-1)    # (20*4096,)
+            seg_gt = cur_sem.reshape(-1)
 
             if output_verbose:
                 ins = group_pred.astype(np.int32)
                 sem = seg_pred.astype(np.int32)
                 sem_softmax = seg_pred_softmax
                 sem_gt = seg_gt
-                ins_gt = cur_group.reshape(-1)  # (20*4096,)
+                ins_gt = cur_group.reshape(-1)
                 for i in range(pts.shape[0]):
                     fout_data_label.write('%f %f %f %d %d %d %f %d %d\n' % (
                     pts[i, 0], pts[i, 1], pts[i, 2], feature[i,0], feature[i,1], feature[i,2], sem_softmax[i, sem[i]], sem[i], ins[i]))   #预测txt的文件组成形式

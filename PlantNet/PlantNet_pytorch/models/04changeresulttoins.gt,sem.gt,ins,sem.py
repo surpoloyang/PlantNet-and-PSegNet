@@ -74,8 +74,8 @@ if not os.path.exists(gt_sem_path):
 for i in range(data.shape[0] // 4096):  # 20 is testdata number
     pcd=data[i*4096:((i+1)*4096)]
     gt=gtdata[i*4096:((i+1)*4096)]
-    # data1=pcd[:,:3]    # xyz坐标数据
-    # data2=pcd[:,-2]      # 语义标签
+    data1=pcd[:,:3]    # xyz坐标数据
+    data2=pcd[:,-2]      # 语义标签
 
     seg=np.concatenate((pcd[:,:3], pcd[:, -2].reshape(4096, 1)), axis=-1)
     print(seg.shape)
