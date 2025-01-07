@@ -27,7 +27,7 @@ pred_data_label_filenames += [line.rstrip() for line in open(file_name)]
 
 gt_label_filenames = [f.rstrip('pred.txt') + 'gt.txt' for f in pred_data_label_filenames]
 
-num_room = len(gt_label_filenames)
+num_room = len(gt_label_filenames)  # 文件数量
 
 # Initialize...
 # acc and macc
@@ -59,10 +59,10 @@ for i in range(len(pred_data_label_filenames)):
     current_gt_label = np.loadtxt(gt_label_filenames[i])
     data_label.append(current_data_label)
     gt_label.append(current_gt_label)
-data_label = np.concatenate(data_label, axis=0)
-gt_label = np.concatenate(gt_label, axis=0)
+data_label = np.concatenate(data_label, axis=0) # (20*4096, 9)
+gt_label = np.concatenate(gt_label, axis=0) # (20*4096, 8)
 
-plant_number = data_label.shape[0]//MAX_POINTS
+plant_number = data_label.shape[0]//MAX_POINTS  # 20
 
 for i in range(plant_number):
     print('%d / %d ...' % (i+1, plant_number))
